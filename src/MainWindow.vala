@@ -201,12 +201,13 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
                 case Cinder.EmberMug.Characteristic.PUSH_EVENTS:
                     device.start_push_notifications ();
                     break;
-                //  case Cinder.EmberMug.Characteristic.STATISTICS:
-                //      device.read_statistics ();
-                //      break;
-                //  case Cinder.EmberMug.Characteristic.LED_COLOR:
-                //      device.read_led_color ();
-                //      break;
+                case Cinder.EmberMug.Characteristic.STATISTICS:
+                    // TODO: This is very noisy - only enable when in a debug mode
+                    //  device.start_statistics_notifications ();
+                    break;
+                case Cinder.EmberMug.Characteristic.LED_COLOR:
+                    device.read_led_color ();
+                    break;
                 default:
                     break;
             }

@@ -34,4 +34,12 @@ public class Cinder.Utils : GLib.Object {
         //  var firmware_version = Cinder.Utils.hex_to_int (firmware_version_hex);
     }
 
+    public static string bytes_to_hex (uint8[] bytes) {
+        var sb = new GLib.StringBuilder ();
+        foreach (var byte in bytes) {
+            sb.append (Cinder.Utils.int_to_hex (byte, 2));
+        }
+        return sb.str;
+    }
+
 }

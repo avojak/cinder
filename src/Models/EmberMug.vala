@@ -469,7 +469,16 @@ public class Cinder.EmberMug : GLib.Object {
     }
 
     public void read_temperature_unit () {
-        // TODO
+        Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.TEMPERATURE_UNIT);
+        if (characteristic == null) {
+            return;
+        }
+        read_async.begin (characteristic, (obj, res) => {
+            var result = read_async.end (res);
+            Cinder.EmberMug.TemperatureUnit temperature_unit = (Cinder.EmberMug.TemperatureUnit) result[0];
+            debug ("Temperature unit = %s", temperature_unit.to_string ());
+            //  liquid_state_changed (liquid_state);
+        });
     }
 
     public void write_temperature_unit () {
@@ -483,7 +492,7 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            Cinder.EmberMug.LiquidLevel liquid_level = (Cinder.EmberMug.LiquidLevel) int.from_little_endian (result[0]);
+            Cinder.EmberMug.LiquidLevel liquid_level = (Cinder.EmberMug.LiquidLevel) result[0];
             debug ("Liquid level = %s", liquid_level.to_string ());
             //  liquid_state_changed (liquid_state);
         });
@@ -514,7 +523,7 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            Cinder.EmberMug.LiquidState liquid_state = (Cinder.EmberMug.LiquidState) int.from_little_endian (result[0]);
+            Cinder.EmberMug.LiquidState liquid_state = (Cinder.EmberMug.LiquidState) result[0];
             if (liquid_state == 3) {
                 // State 3 is unknown, and should not be handled
                 debug ("Unknown liquid state");
@@ -546,6 +555,28 @@ public class Cinder.EmberMug : GLib.Object {
         });
     }
 
+    public void read_mug_id () {
+        // TODO
+    }
+
+    public void read_led_color () {
+        Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.LED_COLOR);
+        if (characteristic == null) {
+            return;
+        }
+        read_async.begin (characteristic, (obj, res) => {
+            var result = read_async.end (res);
+
+            var color_hex_string = "#%s".printf (Cinder.Utils.bytes_to_hex (result));
+            var color = Gdk.RGBA ();
+            if (!color.parse (color_hex_string)) {
+                warning ("Failed to parse LED color: %s", color_hex_string);
+            }
+
+            debug ("LED color = %s", color_hex_string);
+        });
+    }
+
     public void start_push_notifications () {
         try {
             debug ("Starting push notifications");
@@ -557,6 +588,25 @@ public class Cinder.EmberMug : GLib.Object {
                     var push_event = (Cinder.EmberMug.PushEvent) characteristic.value[0];
                     debug ("Received push event: %s", push_event.to_string ());
                     on_push_event_received (push_event);
+                }
+            });
+        } catch (GLib.Error e) {
+            warning (e.message);
+        }
+    }
+
+    public void start_statistics_notifications () {
+        try {
+            debug ("Starting statistics notifications");
+            var characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.STATISTICS);
+            characteristic.start_notify ();
+            ((DBusProxy) characteristic).g_properties_changed.connect ((changed, invalid) => {
+                var value = changed.lookup_value ("Value", GLib.VariantType.BYTESTRING);
+                if (value != null) {
+                    var statistics_notification = characteristic.value[0];
+                    debug ("Received statistics notification: %i", statistics_notification);
+                    debug (Cinder.Utils.bytes_to_hex (characteristic.value));
+                    //  on_push_event_received (push_event);
                 }
             });
         } catch (GLib.Error e) {
