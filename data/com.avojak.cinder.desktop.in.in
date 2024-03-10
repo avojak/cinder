@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Cinder
+GenericName=Control your Ember mug
+Comment=Control your Ember mug
+Categories=Utility;GTK;
+Exec=@APPLICATION_ID@
+Icon=@APPLICATION_ID@
+Terminal=false
+Type=Application
+X-GNOME-Gettext-Domain=@APPLICATION_ID@
+Keywords=ember;mug;coffee;tea;drink;

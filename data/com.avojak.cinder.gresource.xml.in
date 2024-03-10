@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="@RESOURCE_PATH@">
+    <file alias="style.css" compressed="true">stylesheets/style.css</file>
+  </gresource>
+  <gresource prefix="@RESOURCE_PATH@icons/scalable/apps/">
+    <file preprocess="xml-stripblanks" alias="cinder.svg">assets/icons/@APPLICATION_ID@.svg</file>
+  </gresource>
+  <gresource prefix="@RESOURCE_PATH@icons/scalable/actions/">
+    <file preprocess="xml-stripblanks" alias="cafe-symbolic.svg">assets/icons/cafe-symbolic.svg</file>
+  </gresource>
+</gresources>
