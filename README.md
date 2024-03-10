@@ -11,7 +11,7 @@
   <!-- <a href='https://flathub.org/apps/details/com.avojak.cinder'><img width='155' alt='Download on Flathub' src='https://flathub.org/assets/badges/flathub-badge-en.png'/></a> -->
 </p>
 
-## Control your Ember® Mug.
+## Control your Ember® Mug
 
 ## Building
 
