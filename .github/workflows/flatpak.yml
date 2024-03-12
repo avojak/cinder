@@ -16,5 +16,5 @@ jobs:
         uses: flathub-infra/flatpak-github-actions/flatpak-builder@23796715b3dfa4c86ddf50cf29c3cc8b3c82dca8
         with:
           bundle: cinder.flatpak
-          manifest-path: com.avojak.cinder.yml
+          manifest-path: ./flatpak/com.avojak.cinder.yml
           cache-key: "flatpak-builder-${{ github.sha }}"

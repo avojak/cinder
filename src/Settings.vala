@@ -24,4 +24,9 @@
         set { set_int ("window-height", value); }
     }
 
+    public int default_temperature {
+        get { return get_int ("default-temperature"); }
+        set { set_int ("default-temperature", value); }
+    }
+
 }

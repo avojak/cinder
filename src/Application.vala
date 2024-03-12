@@ -82,7 +82,7 @@
             application_name = APP_NAME,
             developer_name = DEVELOPER_NAME,
             version = VERSION,
-            comments = _("Control your Ember mug"),
+            comments = _("Control your Ember® Mug"),
             website = "https://github.com/avojak/cinder",
             issue_url = "https://github.com/avojak/cinder/issues",
             developers = { "%s <%s>".printf (DEVELOPER_NAME, DEVELOPER_EMAIL) },
@@ -90,6 +90,11 @@
             copyright = "© 2024 %s".printf (DEVELOPER_NAME),
             license_type = Gtk.License.GPL_3_0
         };
+        about_window.add_legal_section ("Ember", "Cinder is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Ember Technologies, or any of its subsidiaries or its affiliates. Ember® is a registered trademark of Ember Technologies, Inc.\n\nAll other product names mentioned herein, with or without the registered trademark symbol ® or trademark symbol ™; are generally trademarks and/or registered trademarks of their respective owners.", Gtk.License.UNKNOWN, null);
+        about_window.add_credit_section (_("Related projects"), {
+            "%s %s".printf ("Ember Mug Bluetooth Documentation", "https://github.com/orlopau/ember-mug"),
+            "%s %s".printf ("Python Ember Mug", "https://github.com/sopelj/python-ember-mug")
+        });
         about_window.present ();
     }
 

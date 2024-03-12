@@ -6,3 +6,22 @@
 .temperature-label {
     font-size: 128px;
 }
+
+scale.hsv-scale trough {
+    background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 20px;
+}
+  
+scale.hsv-scale highlight {
+    opacity: 0;
+}
+  
+scale.hsv-scale slider {
+    min-height: 20px;
+    min-width: 20px;
+    opacity: 0.75;
+    margin-left: 0px;
+    margin-right: 0px;
+}

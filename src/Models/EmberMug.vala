@@ -273,16 +273,16 @@ public class Cinder.EmberMug : GLib.Object {
 
     public class BatteryStatus : GLib.Object {
 
-        public int percent_charged { get; set; }
-        public bool charging { get; set; }
+        public int? percent_charged { get; set; }
+        public bool? charging { get; set; }
 
     }
 
     public class FirmwareInfo : GLib.Object {
 
-        private int firmware_version { get; set; }
-        private int hardware_version { get; set; }
-        private int bootloader_version { get; set; }
+        public int? firmware_version { get; set; }
+        public int? hardware_version { get; set; }
+        public int? bootloader_version { get; set; }
 
     }
 
@@ -310,22 +310,18 @@ public class Cinder.EmberMug : GLib.Object {
 
     public Status status { get; private set; default = Status.UNPAIRED; }
 
+    public Cinder.EmberMug.BatteryStatus battery_status { get; private set; default = new Cinder.EmberMug.BatteryStatus(); }
+    public int? current_temperature { get; private set; }
+    public int? target_temperature { get; private set; }
+    public Cinder.EmberMug.TemperatureUnit? temperature_unit { get; private set; }
+    public Cinder.EmberMug.LiquidLevel? liquid_level { get; private set; }
+    public Cinder.EmberMug.LiquidState? liquid_state { get; private set; }
+    public Gdk.RGBA led_color { get; private set; default = Gdk.RGBA (); }
+    public string? mug_name { get; private set; }
+    public Cinder.EmberMug.FirmwareInfo firmware_info { get; private set; default = new Cinder.EmberMug.FirmwareInfo (); }
+
     private Gee.Map<string, Cinder.Bluetooth.GattService> services;
     private Gee.Map<string, Cinder.Bluetooth.GattCharacteristic> characteristics;
-
-    //  private Gee.Queue<Cinder.EmberMug.Command?> command_queue;
-    //  private GLib.Thread<bool>? polling_thread;
-    //  private GLib.Cancellable polling_cancellable = new GLib.Cancellable ();
-
-    private BatteryStatus battery_status;
-    private int current_temperature;
-    private int target_temperature;
-    private TemperatureUnit temperature_unit;
-    private LiquidLevel liquid_level;
-    private LiquidState liquid_state;
-    private Gdk.RGBA led_color;
-    private string mug_name;
-    private FirmwareInfo firmware_info;
 
     public EmberMug.for_device (Cinder.Bluetooth.Device device) {
         Object (
@@ -429,10 +425,10 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            //  var percentage = result[0];
-            //  var charging_status = result[1];
-            debug ("Mug name = %s", ((string) result).substring (0, result.length));
-            //  battery_status_changed (percentage, charging_status == 1);
+            var name = ((string) result).substring (0, result.length);
+            debug ("Mug name = %s", name);
+            mug_name = name;
+            mug_name_changed (name);
         });
     }
 
@@ -449,6 +445,8 @@ public class Cinder.EmberMug : GLib.Object {
             var result = read_async.end (res);
             var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result) * 0.01);
             debug ("Current temperature = %i", value);
+            current_temperature = value;
+            current_temperature_changed (value);
         });
     }
 
@@ -461,6 +459,8 @@ public class Cinder.EmberMug : GLib.Object {
             var result = read_async.end (res);
             var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result) * 0.01);
             debug ("Target temperature = %i", value);
+            target_temperature = value;
+            target_temperature_changed (value);
         });
     }
 
@@ -475,9 +475,10 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            Cinder.EmberMug.TemperatureUnit temperature_unit = (Cinder.EmberMug.TemperatureUnit) result[0];
-            debug ("Temperature unit = %s", temperature_unit.to_string ());
-            //  liquid_state_changed (liquid_state);
+            Cinder.EmberMug.TemperatureUnit unit = (Cinder.EmberMug.TemperatureUnit) result[0];
+            debug ("Temperature unit = %s", unit.to_string ());
+            temperature_unit = unit;
+            temperature_unit_changed (unit);
         });
     }
 
@@ -492,9 +493,10 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            Cinder.EmberMug.LiquidLevel liquid_level = (Cinder.EmberMug.LiquidLevel) result[0];
-            debug ("Liquid level = %s", liquid_level.to_string ());
-            //  liquid_state_changed (liquid_state);
+            Cinder.EmberMug.LiquidLevel level = (Cinder.EmberMug.LiquidLevel) result[0];
+            debug ("Liquid level = %s", level.to_string ());
+            liquid_level = level;
+            liquid_level_changed (level);
         });
     }
 
@@ -512,7 +514,9 @@ public class Cinder.EmberMug : GLib.Object {
             var percentage = result[0];
             var charging_status = result[1];
             debug ("Battery percentage = %i, Charging status = %i", percentage, charging_status);
-            battery_status_changed (percentage, charging_status == 1);
+            battery_status.percent_charged = percentage;
+            battery_status.charging = (charging_status == 1);
+            battery_status_changed (battery_status);
         });
     }
 
@@ -523,18 +527,19 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            Cinder.EmberMug.LiquidState liquid_state = (Cinder.EmberMug.LiquidState) result[0];
-            if (liquid_state == 3) {
+            Cinder.EmberMug.LiquidState state = (Cinder.EmberMug.LiquidState) result[0];
+            if (state == 3) {
                 // State 3 is unknown, and should not be handled
                 debug ("Unknown liquid state");
                 return;
             }
-            debug ("Liquid state = %s", liquid_state.to_string ());
-            liquid_state_changed (liquid_state);
+            debug ("Liquid state = %s", state.to_string ());
+            liquid_state = state;
+            liquid_state_changed (state);
         });
     }
 
-    public void read_firmware () {
+    public void read_firmware_info () {
         Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.FIRMWARE);
         if (characteristic == null) {
             return;
@@ -542,16 +547,22 @@ public class Cinder.EmberMug : GLib.Object {
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
 
-            var firmware_version = Cinder.Utils.little_endian_bytes_to_int (result[0:2]);
-            var hardware_version = Cinder.Utils.little_endian_bytes_to_int (result[2:4]);
+            firmware_info.firmware_version = Cinder.Utils.little_endian_bytes_to_int (result[0:2]);
+            firmware_info.hardware_version = Cinder.Utils.little_endian_bytes_to_int (result[2:4]);
 
             // Bootloader version is optional, and occupies bytes 5-6
             int? bootloader_version = null;
             if (result.length == 6) {
                 bootloader_version = Cinder.Utils.little_endian_bytes_to_int (result[4:6]);
+                firmware_info.bootloader_version = bootloader_version;
             }
 
-            debug ("Firmware = %i, hardware = %i, bootloader = %s", firmware_version, hardware_version, bootloader_version == null ? "Not provided" : bootloader_version.to_string ());
+            debug ("Firmware = %i, hardware = %i, bootloader = %s", 
+                    firmware_info.firmware_version,
+                    firmware_info.hardware_version,
+                    firmware_info.bootloader_version == null ? "Not provided" : firmware_info.bootloader_version.to_string ());
+
+            firmware_info_changed (firmware_info);
         });
     }
 
@@ -566,14 +577,12 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-
             var color_hex_string = "#%s".printf (Cinder.Utils.bytes_to_hex (result));
-            var color = Gdk.RGBA ();
-            if (!color.parse (color_hex_string)) {
+            if (!led_color.parse (color_hex_string)) {
                 warning ("Failed to parse LED color: %s", color_hex_string);
             }
-
             debug ("LED color = %s", color_hex_string);
+            led_color_changed (led_color);
         });
     }
 
@@ -625,35 +634,23 @@ public class Cinder.EmberMug : GLib.Object {
             case Cinder.EmberMug.PushEvent.NOT_CHARGING:
                 device_not_charging ();
                 return;
-            //  case Cinder.EmberMug.PushEvent.REFRESH_TARGET_TEMPERATURE:
-            //  case Cinder.EmberMug.PushEvent.REFRESH_CURRENT_TEMPERATURE:
-            //  case Cinder.EmberMug.PushEvent.REFRESH_LIQUID_LEVEL:
+            case Cinder.EmberMug.PushEvent.REFRESH_TARGET_TEMPERATURE:
+                read_target_temperature ();
+                return;
+            case Cinder.EmberMug.PushEvent.REFRESH_CURRENT_TEMPERATURE:
+                read_current_temperature ();
+                return;
+            case Cinder.EmberMug.PushEvent.REFRESH_LIQUID_LEVEL:
+                read_liquid_level ();
+                return;
             case Cinder.EmberMug.PushEvent.REFRESH_LIQUID_STATE:
                 read_liquid_state ();
                 break;
             default:
-                warning ("Unhandled push event received");
+                warning ("Unhandled push event received: %s", event.to_string ());
                 break;
         }
     }
-
-    // XXX: The device I'm testing with doesn't appear to support GATT notifications (UUID: fc540012-236c-4c94-8fa9-944a3e5353fa)
-    //      As a workaround, simply poll for updates periodically from a worker thread.
-    //  public void start_polling () {
-    //      if (polling_thread != null) {
-    //          return;
-    //      }
-    //      debug ("Starting polling");
-    //      polling_thread = new GLib.Thread<bool> ("polling", () => {
-    //          while (!polling_cancellable.is_cancelled ()) {
-    //              GLib.Thread.usleep (10 * 1000000); // 1000000 microseconds per second
-    //              read_battery_status ();
-    //              read_current_temperature ();
-    //              read_liquid_state ();
-    //          }
-    //          return true;
-    //      });
-    //  }
 
     private bool characteristic_belongs_to_service (GLib.DBusInterface characteristic, GLib.DBusInterface service) {
         if (characteristic.get_object () == null || service.get_object () == null) {
@@ -663,11 +660,9 @@ public class Cinder.EmberMug : GLib.Object {
     }
 
     private Cinder.Bluetooth.GattCharacteristic? lookup_characteristic (Cinder.EmberMug.Characteristic characteristic) {
-        //  lock (characteristics) {
         if (characteristics.has_key (characteristic.to_uuid ())) {
             return characteristics.get (characteristic.to_uuid ());
         }
-        //  }
         return null;
     }
 
@@ -709,12 +704,6 @@ public class Cinder.EmberMug : GLib.Object {
         return result;
     }
 
-    //  private void queue_command (Cinder.EmberMug.Command command) {
-    //      lock (command_queue) {
-    //          command_queue.offer (command);
-    //      }
-    //  }
-
     //  public signal void connected ();
     //  public signal void disconnected ();
     //  public signal void paired ();
@@ -722,10 +711,20 @@ public class Cinder.EmberMug : GLib.Object {
 
     public signal void characteristic_ready (Cinder.EmberMug.Characteristic characteristic);
 
-    public signal void battery_status_changed (int percent_charged, bool charging);
-    public signal void liquid_state_changed (Cinder.EmberMug.LiquidState liquid_state);
-    
+    public signal void battery_status_changed (Cinder.EmberMug.BatteryStatus battery_status);
     public signal void device_charging ();
     public signal void device_not_charging ();
+
+    public signal void liquid_state_changed (Cinder.EmberMug.LiquidState liquid_state);
+    public signal void liquid_level_changed (Cinder.EmberMug.LiquidLevel liquid_level);
+
+    public signal void current_temperature_changed (int temperature);
+    public signal void target_temperature_changed (int temperature);
+    public signal void temperature_unit_changed (Cinder.EmberMug.TemperatureUnit unit);
+
+    public signal void led_color_changed (Gdk.RGBA color);
+    public signal void mug_name_changed (string name);
+
+    public signal void firmware_info_changed (Cinder.EmberMug.FirmwareInfo firmware_info);
 
 }

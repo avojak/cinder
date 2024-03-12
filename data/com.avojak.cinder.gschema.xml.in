@@ -16,5 +16,10 @@
       <summary>Window height</summary>
       <description>Most recent window height</description>
     </key>
+    <key name="default-temperature" type="i">
+      <default>135</default>
+      <summary>Default temperature</summary>
+      <description>The default target temperature if no preset is used</description>
+    </key>
   </schema>
 </schemalist>

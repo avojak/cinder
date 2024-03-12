@@ -8,8 +8,11 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
     private Gtk.Stack base_stack;
     private Adw.OverlaySplitView overlay_split_view;
     private Cinder.WelcomeView welcome_view;
+    private Cinder.DeviceControlView device_control_view;
 
     private unowned Cinder.EmberMug? current_device;
+    private Gtk.Revealer battery_revealer;
+    private Gtk.Image battery_indicator;
 
     public MainWindow (Gtk.Application application) {
         Object (
@@ -19,7 +22,7 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
             height_request: 360
         );
         add_action_entries ({
-            
+            { "led-color", on_led_color_button_clicked }
         }, this);
     }
 
@@ -28,18 +31,33 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
             add_css_class("devel");
         }
 
+        var device_menu = new GLib.Menu ();
+        device_menu.append (_("Temperature Unit"), null);
+        device_menu.append (_("Select LED Light Color…"), "win.led-color");
+        //  var led_color_menu_item = new GLib.MenuItem ("LED Light Color", null);
+        //  led_color_menu_item.set_icon (GLib.Icon.new_for_string ("circle-filled-symbolic"));
+        //  device_menu.append_item (led_color_menu_item);
+
         var app_menu = new GLib.Menu ();
         //  app_menu.append (_("Preferences"), "app.preferences");
         app_menu.append (_("About %s").printf (APP_NAME), "app.about");
         app_menu.append (_("Quit"), "app.quit");
 
         var menu = new GLib.Menu ();
+        menu.append_section (null, device_menu);
         menu.append_section (null, app_menu);
 
         var menu_button = new Gtk.MenuButton () {
             icon_name = "open-menu-symbolic",
             menu_model = menu,
             tooltip_text = _("Menu")
+        };
+
+        battery_indicator = new Gtk.Image.from_icon_name (null);
+        battery_revealer = new Gtk.Revealer () {
+            child = battery_indicator,
+            reveal_child = false,
+            transition_type = Gtk.RevealerTransitionType.SLIDE_RIGHT
         };
 
         var toggle_sidebar_button = new Gtk.ToggleButton () {
@@ -51,12 +69,13 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
             show_title = false
         };
         header_bar.pack_start (toggle_sidebar_button);
+        header_bar.pack_start (battery_revealer);
         header_bar.pack_end (menu_button);
 
-        var device_view = new Cinder.DeviceControlView ();
+        device_control_view = new Cinder.DeviceControlView ();
 
         var toolbar_view = new Adw.ToolbarView () {
-            content = device_view
+            content = device_control_view
         };
         toolbar_view.add_top_bar (header_bar);
 
@@ -147,7 +166,9 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
 
         // Request initial states when characteristics are registered
         // TODO: There's a race condition here, where the characteristics might already be registered
-        //       by the time that this signal handler is connected.
+        //       by the time that this signal handler is connected. This can also happen if the device
+        //       is paired, but not connected (i.e. the characteristics are all registered immediately,
+        //       but the device is not connected until manually selected).
         device.characteristic_ready.connect ((characteristic) => {
             switch (characteristic) {
                 case Cinder.EmberMug.Characteristic.MUG_NAME:
@@ -181,7 +202,7 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
                 //      device.read_uuid_acceleration ();
                 //      break;
                 case Cinder.EmberMug.Characteristic.FIRMWARE:
-                    device.read_firmware ();
+                    device.read_firmware_info ();
                     break;
                 //  case Cinder.EmberMug.Characteristic.MUG_ID:
                 //      device.read_mug_id ();
@@ -212,11 +233,111 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
                     break;
             }
         });
+
+        device.battery_status_changed.connect (update_battery_indicator);
+        device.device_charging.connect (on_device_charging);
+        device.device_not_charging.connect (on_device_not_charging);
+        
+        device.current_temperature_changed.connect (device_control_view.set_current_temperature);
+        device.target_temperature_changed.connect ((temperature) => {
+            // TODO
+            device_control_view.show_temperature_controls ();
+        });
+        device.temperature_unit_changed.connect ((unit) => {
+            // TODO
+        });
+
+        device.liquid_level_changed.connect ((liquid_level) => {
+            // TODO
+        });
+        device.liquid_state_changed.connect ((liquid_state) => {
+            // TODO
+        });
+
+        // Read initial status
+        //  device.read_mug_name ();
+        //  device.read_current_temperature ();
+        //  device.read_target_temperature ();
+        //  device.read_temperature_unit ();
+        //  device.read_liquid_level ();
+        //  device.read_battery_status ();
+        //  device.read_liquid_state ();
+        //  device.read_firmware ();
+        //  device.start_push_notifications ();
+        //  device.read_led_color ();
+    }
+
+    private void update_battery_indicator (Cinder.EmberMug.BatteryStatus battery_status) {
+        var icon_name = "battery-level-%s-symbolic";
+        if (battery_status.percent_charged <= 5) {
+            icon_name = icon_name.printf ("0");
+        } else if (battery_status.percent_charged > 5 && battery_status.percent_charged <= 15) {
+            icon_name = icon_name.printf ("10");
+        } else if (battery_status.percent_charged > 15 && battery_status.percent_charged <= 25) {
+            icon_name = icon_name.printf ("20");
+        } else if (battery_status.percent_charged > 25 && battery_status.percent_charged <= 35) {
+            icon_name = icon_name.printf ("30");
+        } else if (battery_status.percent_charged > 35 && battery_status.percent_charged <= 45) {
+            icon_name = icon_name.printf ("40");
+        } else if (battery_status.percent_charged > 45 && battery_status.percent_charged <= 55) {
+            icon_name = icon_name.printf ("50");
+        } else if (battery_status.percent_charged > 55 && battery_status.percent_charged <= 65) {
+            icon_name = icon_name.printf ("60");
+        } else if (battery_status.percent_charged > 65 && battery_status.percent_charged <= 75) {
+            icon_name = icon_name.printf ("70");
+        } else if (battery_status.percent_charged > 75 && battery_status.percent_charged <= 85) {
+            icon_name = icon_name.printf ("80");
+        } else if (battery_status.percent_charged > 85 && battery_status.percent_charged <= 95) {
+            icon_name = icon_name.printf ("90");
+        } else if (battery_status.percent_charged > 95) {
+            icon_name = "battery-full-symbolic";
+        }
+        if (battery_status.charging) {
+            icon_name = icon_name.replace ("symbolic", "charging-symbolic");
+        }
+        battery_indicator.icon_name = icon_name;
+        battery_indicator.tooltip_text = "%i%% charged".printf (battery_status.percent_charged);
+
+        if (!battery_revealer.child_revealed) {
+            battery_revealer.set_reveal_child (true);
+        }
+    }
+
+    private void on_device_charging () {
+        if (battery_indicator.icon_name.contains ("charging")) {
+            return;
+        }
+        battery_indicator.icon_name = battery_indicator.icon_name.replace ("symbolic", "charging-symbolic");
+    }
+
+    private void on_device_not_charging () {
+        if (!battery_indicator.icon_name.contains ("charging")) {
+            return;
+        }
+        battery_indicator.icon_name = battery_indicator.icon_name.replace ("charging-symbolic", "symbolic");
     }
 
     private void on_device_disconnected () {
         current_device = null;
         base_stack.set_visible_child_full ("welcome", Gtk.StackTransitionType.UNDER_RIGHT);
+    }
+
+    private void on_led_color_button_clicked () {
+        var dialog = new Cinder.ColorChooserDialog (this, current_device.led_color);
+        dialog.color_selected.connect ((color) => {
+            debug (color.to_string ());
+        });
+        dialog.present ();
+        //  var dialog = new Gtk.ColorDialog () {
+        //      with_alpha = false
+        //  };
+        //  dialog.choose_rgba.begin (this, null, null, (obj, res) => {
+        //      try {
+        //          dialog.choose_rgba.end (res);
+        //      } catch (GLib.Error e) {
+        //          warning (e.message);
+        //      }
+        //  });
     }
 
 }
