@@ -42,9 +42,9 @@ public class Cinder.Bluetooth.EmberDeviceManager : GLib.Object {
         create_manager.begin ();
     }
 
-    public void start () {
+    //  public void start () {
         //  create_manager.begin ();
-    }
+    //  }
 
     private async void create_manager () {
         try {
@@ -94,6 +94,12 @@ public class Cinder.Bluetooth.EmberDeviceManager : GLib.Object {
     [CCode (cname="cinder_bluetooth_gatt_descriptor_proxy_get_type")]
     extern static GLib.Type get_gatt_descriptor_proxy_type ();
 
+    [CCode (cname="cinder_bluetooth_advertisement_monitor_proxy_get_type")]
+    extern static GLib.Type get_advertisement_monitor_proxy_type ();
+
+    [CCode (cname="cinder_bluetooth_advertisement_monitor_manager_proxy_get_type")]
+    extern static GLib.Type get_advertisement_monitor_manager_proxy_type ();
+
     private GLib.Type object_manager_proxy_get_type (GLib.DBusObjectManagerClient manager, string object_path, string? interface_name) {
         if (interface_name == null) {
             return typeof (GLib.DBusObjectProxy);
@@ -112,6 +118,10 @@ public class Cinder.Bluetooth.EmberDeviceManager : GLib.Object {
                 return get_gatt_characteristic_proxy_type ();
             case "org.bluez.GattDescriptor1":
                 return get_gatt_descriptor_proxy_type ();
+            //  case "org.bluez.AdvertisementMonitor1":
+            //      return get_advertisement_monitor_proxy_type ();
+            //  case "org.bluez.AdvertisementMonitorManager1":
+            //      return get_advertisement_monitor_manager_proxy_type ();
             default:
                 return typeof (GLib.DBusProxy);
         }
@@ -216,6 +226,11 @@ public class Cinder.Bluetooth.EmberDeviceManager : GLib.Object {
         //          gatt_descriptors_by_characteristic_path.set (descriptor.characteristic, new Gee.ArrayList<Cinder.Bluetooth.GattDescriptor> ());
         //      }
         //      gatt_descriptors_by_characteristic_path.get (descriptor.characteristic).add (descriptor);
+        } else if (iface is Cinder.Bluetooth.AdvertisementMonitor) {
+            unowned Cinder.Bluetooth.AdvertisementMonitor monitor = (Cinder.Bluetooth.AdvertisementMonitor) iface;
+            debug ("monitor found");
+        } else if (iface is Cinder.Bluetooth.AdvertisementMonitorManager) {
+            debug ("monitor manager");
         }
     }
 

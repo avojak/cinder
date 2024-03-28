@@ -11,3 +11,8 @@ public const string DEVELOPER_WEBSITE = "@DEVELOPER_WEBSITE@";
 
 public const uint16 EMBER_BLE_SIG_ID = 0x03C1;
 public const string EMBER_UUID_FORMAT = "fc54%s-236c-4c94-8fa9-944a3e5353fa";
+
+public const int MIN_TEMP_CELSIUS = 49;
+public const int MAX_TEMP_CELSIUS = 63;
+public const int MIN_TEMP_FAHRENHEIT = 120;
+public const int MAX_TEMP_FAHRENHEIT = 145;

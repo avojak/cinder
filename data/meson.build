@@ -7,10 +7,14 @@ install_data(
 schema_data = configuration_data()
 schema_data.set('APPLICATION_ID', application_id)
 schema_data.set('SCHEMA_PATH', application_schema_path)
-configure_file(
-    input: 'com.avojak.cinder.gschema.xml.in',
+i18n.merge_file(
+    input: configure_file(
+        input: 'com.avojak.cinder.gschema.xml.in.in',
+        output: 'com.avojak.cinder.gschema.xml.in',
+        configuration: schema_data
+    ),
     output: '@0@.gschema.xml'.format(application_id),
-    configuration: schema_data,
+    po_dir: meson.source_root() / 'po',
     install: true,
     install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
 )
@@ -48,11 +52,11 @@ resources_data = configuration_data()
 resources_data.set('RESOURCE_PATH', application_resource_path)
 resources_data.set('APPLICATION_ID', application_id)
 asresources = gnome.compile_resources(
-  'as-resources',
-  configure_file(
-    input: 'com.avojak.cinder.gresource.xml.in',
-    output: 'com.avojak.cinder.gresource.xml',
-    configuration: resources_data
-  ),
-  source_dir: 'data'
+    'as-resources',
+    configure_file(
+        input: 'com.avojak.cinder.gresource.xml.in',
+        output: 'com.avojak.cinder.gresource.xml',
+        configuration: resources_data
+    ),
+    source_dir: 'data'
 )

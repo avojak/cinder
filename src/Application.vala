@@ -33,6 +33,13 @@
     }
 
     protected override void activate () {
+        // On a repeat invocation (e.g. clicking a notification), simply display the
+        // existing window instead of creating a new one.
+        if (main_window != null) {
+            main_window.present ();
+            return;
+        }
+
         main_window = new Cinder.MainWindow (this);
         main_window.close_request.connect (() => {
             if (connected_device != null) {

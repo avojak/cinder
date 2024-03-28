@@ -216,7 +216,7 @@ public class Cinder.EmberMug : GLib.Object {
                 case NOT_EMPTY:
                     return _("Not empty");
                 default:
-                    assert_not_reached ();
+                    return _("Unknown");
             }
         }
     }
@@ -232,6 +232,28 @@ public class Cinder.EmberMug : GLib.Object {
                     return _("Celsius");
                 case FAHRENHEIT:
                     return _("Fahrenheit");
+                default:
+                    assert_not_reached ();
+            }
+        }
+
+        public int get_minimum_temperature () {
+            switch (this) {
+                case CELSIUS:
+                    return MIN_TEMP_CELSIUS;
+                case FAHRENHEIT:
+                    return MIN_TEMP_FAHRENHEIT;
+                default:
+                    assert_not_reached ();
+            } 
+        }
+
+        public int get_maximum_temperature () {
+            switch (this) {
+                case CELSIUS:
+                    return MAX_TEMP_CELSIUS;
+                case FAHRENHEIT:
+                    return MAX_TEMP_FAHRENHEIT;
                 default:
                     assert_not_reached ();
             }
@@ -377,7 +399,7 @@ public class Cinder.EmberMug : GLib.Object {
         characteristics.set (characteristic.UUID, characteristic);
         //  }
         var ember_characteristic = Cinder.EmberMug.Characteristic.from_uuid (characteristic.UUID);
-        debug ("Registered characteristic %s (%s) to %s (%s)", ember_characteristic.to_string (), characteristic.UUID, device.alias, device.address);
+        debug ("Registered characteristic %s (%s) (%s) to %s (%s)", ember_characteristic.to_string (), characteristic.UUID, string.joinv (", ", characteristic.flags), device.alias, device.address);
         characteristic_ready (ember_characteristic);
     }
 
@@ -443,7 +465,9 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result) * 0.01);
+            var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result[0:2]) * 0.01);
+            //  var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_uint16 (result) * 0.01);
+            //  debug ("Received current temperature data = %s", Cinder.Utils.int_to_hex (value, 4, true));
             debug ("Current temperature = %i", value);
             current_temperature = value;
             current_temperature_changed (value);
@@ -457,15 +481,27 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
-            var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result) * 0.01);
+            var value = (int) GLib.Math.round (Cinder.Utils.little_endian_bytes_to_int (result[0:2]) * 0.01);
+            //  debug ("Received target temperature data = %s", Cinder.Utils.int_to_hex (value, 4, true));
             debug ("Target temperature = %i", value);
             target_temperature = value;
             target_temperature_changed (value);
         });
     }
 
-    public void write_target_temperature () {
-        // TODO
+    public void write_target_temperature (int temperature) {
+        Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.TARGET_TEMPERATURE);
+        if (characteristic == null) {
+            return;
+        }
+        uint16 scaled_temperature = (uint16) temperature * 100;
+        uint8 msb = (uint8) ((scaled_temperature & 0xFF00) >> 8);
+        uint8 lsb = (uint8) (scaled_temperature & 0x00FF);
+        var data = new uint8[] {lsb, msb}; 
+        debug ("Setting target temperature = %i", temperature);
+        write_async.begin (characteristic, data, (obj, res) => {
+            write_async.end (res);
+        });
     }
 
     public void read_temperature_unit () {
@@ -482,7 +518,7 @@ public class Cinder.EmberMug : GLib.Object {
         });
     }
 
-    public void write_temperature_unit () {
+    public void write_temperature_unit (Cinder.EmberMug.TemperatureUnit unit) {
         // TODO
     }
 
@@ -493,6 +529,7 @@ public class Cinder.EmberMug : GLib.Object {
         }
         read_async.begin (characteristic, (obj, res) => {
             var result = read_async.end (res);
+            // TODO: This shouldn't be an enum, but an integer from 0->30 (or is it 0->100?)
             Cinder.EmberMug.LiquidLevel level = (Cinder.EmberMug.LiquidLevel) result[0];
             debug ("Liquid level = %s", level.to_string ());
             liquid_level = level;
@@ -568,6 +605,28 @@ public class Cinder.EmberMug : GLib.Object {
 
     public void read_mug_id () {
         // TODO
+    }
+
+    public void read_dsk () {
+        Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.DSK);
+        if (characteristic == null) {
+            return;
+        }
+        read_async.begin (characteristic, (obj, res) => {
+            var result = read_async.end (res);
+            debug ("DSK = %s", Cinder.Utils.bytes_to_hex (result));
+        });
+    }
+
+    public void read_udsk () {
+        Cinder.Bluetooth.GattCharacteristic? characteristic = lookup_characteristic (Cinder.EmberMug.Characteristic.UDSK);
+        if (characteristic == null) {
+            return;
+        }
+        read_async.begin (characteristic, (obj, res) => {
+            var result = read_async.end (res);
+            debug ("UDSK = %s", Cinder.Utils.bytes_to_hex (result));
+        });
     }
 
     public void read_led_color () {
@@ -678,7 +737,7 @@ public class Cinder.EmberMug : GLib.Object {
 
     private uint8[]? read (Cinder.Bluetooth.GattCharacteristic characteristic) {
         try {
-            uint8[] result = characteristic.read_value (new GLib.HashTable<string, GLib.Variant> (null, null));
+            uint8[] result = characteristic.read_value (new GLib.HashTable<string, GLib.Variant> (str_hash, str_equal));
             if (result == null) {
                 // TODO throw error?
                 return null;
@@ -702,6 +761,26 @@ public class Cinder.EmberMug : GLib.Object {
         yield;
 
         return result;
+    }
+
+    private void write (Cinder.Bluetooth.GattCharacteristic characteristic, uint8[] buffer) {
+        try {
+            characteristic.write_value (buffer, new GLib.HashTable<string, GLib.Variant> (str_hash, str_equal));
+        } catch (GLib.Error e) {
+            // TODO: This is reached, for example, when a write is not permitted because the mug has not
+            //       been setup via the official app.
+            warning (e.message);
+        }
+    }
+
+    private async void write_async (Cinder.Bluetooth.GattCharacteristic characteristic, uint8[] data) {
+        GLib.SourceFunc callback = write_async.callback;        
+        var value = data;
+        new GLib.Thread<void> ("write-%s".printf (characteristic.UUID), () => {
+            write (characteristic, value);
+            Idle.add ((owned) callback);
+        });
+        yield;
     }
 
     //  public signal void connected ();

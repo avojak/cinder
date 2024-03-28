@@ -22,17 +22,20 @@ public class Cinder.Utils : GLib.Object {
         return result;
     }
 
-    public static int little_endian_bytes_to_int (uint8[] bytes) {
-        //  var b = new GLib.Bytes (bytes);
-        
+    public static int little_endian_bytes_to_int (uint8[] bytes) {        
         var sb = new GLib.StringBuilder ();
         for (int i = bytes.length - 1; i >= 0; i--) {
             sb.append (Cinder.Utils.int_to_hex (bytes[i], 2));
         }
         return Cinder.Utils.hex_to_int (sb.str);
-        //  var firmware_version_hex = "%s%s".printf (Cinder.Utils.int_to_hex (firmware_version_bytes[1], 2), Cinder.Utils.int_to_hex (firmware_version_bytes[0], 2));
-        //  var firmware_version = Cinder.Utils.hex_to_int (firmware_version_hex);
     }
+
+    //  public static uint16 little_endian_bytes_to_uint16 (uint8[] bytes) {
+    //      uint16 value = bytes[1];
+    //      value = value << 8;
+    //      value = value & bytes[0];
+    //      return value;
+    //  }
 
     public static string bytes_to_hex (uint8[] bytes) {
         var sb = new GLib.StringBuilder ();
@@ -40,6 +43,27 @@ public class Cinder.Utils : GLib.Object {
             sb.append (Cinder.Utils.int_to_hex (byte, 2));
         }
         return sb.str;
+    }
+
+    public static int celsius_to_fahrenheit (int temp) {
+        return (int) Math.round (((double) temp) * (9.0 / 5.0) + 32.0);
+    }
+
+    public static int fahrenheit_to_celsius (int temp) {
+        return (int) Math.round (((double) (temp - 32)) * (5.0 / 9.0));
+    }
+
+    public static uint8[] uint16_to_bytes (uint16 value) {
+        //  var hex_string = Cinder.Utils.int_to_hex (value, 4, true);
+        uint8[] data = new uint8[2];
+        //  data[0] = hex_string[0];
+        //  data[1] = hex_string[1];
+        //  return data;
+        //  return value.to_string ().data;
+        //  uint8[] data = new uint8[2];
+        data[0] = (uint8) (value & 0x00ff);
+        data[1] = (uint8) (value >> 8);
+        return data;
     }
 
 }

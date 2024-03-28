@@ -19,6 +19,8 @@ config_header = configure_file(
 cinder_files = files(
     'Models' / 'EmberMug.vala',
     'Services' / 'Bluetooth' / 'Adapter.vala',
+    'Services' / 'Bluetooth' / 'AdvertisementMonitor.vala',
+    'Services' / 'Bluetooth' / 'AdvertisementMonitorManager.vala',
     'Services' / 'Bluetooth' / 'Agent.vala',
     'Services' / 'Bluetooth' / 'AgentManager.vala',
     'Services' / 'Bluetooth' / 'Device.vala',
@@ -35,6 +37,7 @@ cinder_files = files(
     'Widgets' / 'ColorChooserDialog.vala',
     'Widgets' / 'EmberDeviceRow.vala',
     'Widgets' / 'HsvColorChooser.vala',
+    'Widgets' / 'PresetCard.vala',
     'Widgets' / 'TemperatureControl.vala',
     'Application.vala',
     'MainWindow.vala',

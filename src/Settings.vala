@@ -29,4 +29,31 @@
         set { set_int ("default-temperature", value); }
     }
 
+    public Cinder.EmberMug.TemperatureUnit temperature_unit {
+        get { return get_int ("temperature-unit"); }
+        set { set_int ("temperature-unit", value); }
+    }
+
+    public string temperature_presets {
+        owned get { return get_string ("temperature-presets"); }
+        set { set_string ("temperature-presets", value); }
+        //  get {
+        //      Gee.Map<string, int> presets = new Gee.HashMap<string, int> ();
+        //      var value = get_string ("temperature-presets");
+        //      var preset_strings = value.split (",");
+        //      foreach (var preset_string in preset_strings) {
+        //          var tokens = preset_string.split (":");
+        //          presets.set (tokens[0], int.parse (tokens[1]));
+        //      }
+        //      return presets;
+        //  }
+        //  set {
+        //      var sb = new GLib.StringBuilder ();
+        //      foreach (var entry in value.entries) {
+        //          sb.append ();
+        //      }
+        //      set_string ("temperature-presets", value);
+        //  }
+    }
+
 }

@@ -24,6 +24,11 @@ public class Cinder.DeviceControlView : Adw.Bin {
 
         temperature_control_page = new Cinder.TemperatureControlPage ();
         var presets_page = new Cinder.PresetsPage ();
+        presets_page.preset_selected.connect ((temperature) => {
+            preset_selected (temperature);
+            temperature_control_page.set_target_temperature (temperature);
+        });
+
         carousel.append (temperature_control_page);
         carousel.append (presets_page);
 
@@ -38,12 +43,14 @@ public class Cinder.DeviceControlView : Adw.Bin {
         temperature_control_page.set_current_temperature (temperature);
     }
 
-    public void show_temperature_controls () {
-        temperature_control_page.show_controls ();
+    public void device_empty () {
+        temperature_control_page.device_empty ();
     }
 
-    public void hide_temperature_controls () {
-        temperature_control_page.hide_controls ();
+    public void device_not_empty () {
+        temperature_control_page.device_not_empty ();
     }
+
+    public signal void preset_selected (int temperature);
 
 }

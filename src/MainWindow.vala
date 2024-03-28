@@ -73,6 +73,12 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
         header_bar.pack_end (menu_button);
 
         device_control_view = new Cinder.DeviceControlView ();
+        device_control_view.preset_selected.connect ((temperature) => {
+            if (current_device == null) {
+                return;
+            }
+            current_device.write_target_temperature (temperature);
+        });
 
         var toolbar_view = new Adw.ToolbarView () {
             content = device_control_view
@@ -207,12 +213,12 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
                 //  case Cinder.EmberMug.Characteristic.MUG_ID:
                 //      device.read_mug_id ();
                 //      break;
-                //  case Cinder.EmberMug.Characteristic.DSK:
-                //      device.read_dsk ();
-                //      break;
-                //  case Cinder.EmberMug.Characteristic.UDSK:
-                //      device.read_udsk ();
-                //      break;
+                case Cinder.EmberMug.Characteristic.DSK:
+                    device.read_dsk ();
+                    break;
+                case Cinder.EmberMug.Characteristic.UDSK:
+                    device.read_udsk ();
+                    break;
                 //  case Cinder.EmberMug.Characteristic.CONTROL_REGISTER_ADDRESS:
                 //      device.read_control_register_address ();
                 //      break;
@@ -240,18 +246,31 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
         
         device.current_temperature_changed.connect (device_control_view.set_current_temperature);
         device.target_temperature_changed.connect ((temperature) => {
-            // TODO
-            device_control_view.show_temperature_controls ();
+            if (device.liquid_level == Cinder.EmberMug.LiquidLevel.EMPTY) {
+                return;
+            }
+            //  device_control_view.show_temperature_controls ();
         });
         device.temperature_unit_changed.connect ((unit) => {
             // TODO
         });
 
         device.liquid_level_changed.connect ((liquid_level) => {
-            // TODO
+            if (device.liquid_level == Cinder.EmberMug.LiquidLevel.EMPTY) {
+                device_control_view.device_empty ();
+            } else {
+                device_control_view.device_not_empty ();
+            }
         });
         device.liquid_state_changed.connect ((liquid_state) => {
-            // TODO
+            switch (liquid_state) {
+                case Cinder.EmberMug.LiquidState.STABLE_TEMPERATURE:
+                    on_target_temperature_reached ();
+                    break;
+                default:
+                    warning ("Unahndled liquid state: %s", liquid_state.to_string ());
+                    break;
+            }
         });
 
         // Read initial status
@@ -338,6 +357,23 @@ public class Cinder.MainWindow : Adw.ApplicationWindow {
         //          warning (e.message);
         //      }
         //  });
+    }
+
+    private void on_target_temperature_reached () {
+        if (current_device == null) {
+            return;
+        }
+        
+        // Don't send the system notification if the window is currently in focus
+        if (is_active) {
+            return;
+        }
+
+        // TODO: Don't send the notification again until the target temperature has changed
+
+        var notification = new GLib.Notification (_("Your drink is ready!"));
+        notification.set_body (_("%s has reached the ideal temperature of %i°").printf (current_device.device.alias, current_device.target_temperature));
+        application.send_notification ("temperature-reached", notification);
     }
 
 }
